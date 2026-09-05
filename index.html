@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Patio - Remolques</title>
+  <!-- Soporte para guardar como PWA en pantalla de inicio de iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Control Patio">
+  
+  <style>
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --primary: #007aff;
+      --danger: #ff3b30;
+      --success: #34c759;
+      --text: #1c1c1e;
+      --text-secondary: #8e8e93;
+      --border: #e5e5ea;
+    }
+
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text); margin: 0; padding: 16px; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header h1 { font-size: 1.4rem; margin: 0; }
+    .badge-count { background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; }
+
+    .card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; outline: none; }
+    input:focus { border-color: var(--primary); }
+
+    .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: 600; width: 100%; cursor: pointer; }
+    .btn-danger { background: var(--danger); }
+    .btn:active { opacity: 0.8; }
+
+    .search-box { margin-bottom: 16px; }
+    .search-box input { background: #e9e9eb; border: none; font-size: 1.1rem; }
+
+    .unit-card { background: var(--card-bg); border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 6px solid var(--success); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+    .unit-card.alerta { border-left-color: var(--danger); }
+    
+    .unit-info h3 { margin: 0 0 4px 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+    .unit-info p { margin: 2px 0; font-size: 0.85rem; color: var(--text-secondary); }
+    
+    .stay-time { font-weight: bold; font-size: 1.1rem; color: var(--text); }
+    .stay-time.alerta-texto { color: var(--danger); }
+
+    .actions { display: flex; gap: 8px; }
+    .btn-small { padding: 8px 12px; font-size: 0.85rem; width: auto; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Control de Patio</h1>
+    <span class="badge-count" id="total-unidades">0 en patio</span>
+  </div>
+
+  <!-- Formulario de Entrada Rápida -->
+  <div class="card">
+    <div class="form-grid">
+      <input type="text" id="econ-input" placeholder="Económico (ej. 4502)" autocomplete="off">
+      <input type="text" id="placa-input" placeholder="Placa (opcional)" autocomplete="off">
+    </div>
+    <button class="btn" onclick="registrarEntrada()">Ingresar a Patio</button>
+  </div>
+
+  <!-- Buscador en tiempo real -->
+  <div class="search-box">
+    <input type="text" id="buscar" placeholder="🔍 Buscar por económico o placa..." oninput="renderizarListado()">
+  </div>
+
+  <!-- Lista de Unidades Activas -->
+  <div id="contenedor-lista"></div>
+
+  <script>
+    // Recuperar datos almacenados en el navegador del iPad o iniciar array vacío
+    let unidades = JSON.parse(localStorage.getItem('patio_unidades')) || [];
+
+    function guardarDatos() {
+      localStorage.setItem('patio_unidades', JSON.stringify(unidades));
+      renderizarListado();
+    }
+
+    function registrarEntrada() {
+      const econ = document.getElementById('econ-input').value.trim().toUpperCase();
+      const placa = document.getElementById('placa-input').value.trim().toUpperCase();
+
+      if (!econ) {
+        alert('Por favor ingresa al menos el número económico.');
+        return;
+      }
+
+      // Verificar si ya existe en patio
+      const existe = unidades.some(u => u.economico === econ);
+      if (existe) {
+        alert(`El económico ${econ} ya está registrado en patio.`);
+        return;
+      }
+
+      const nuevaUnidad = {
+        id: Date.now(),
+        economico: econ,
+        placa: placa || 'S/P',
+        ingreso: new Date().toISOString()
+      };
+
+      unidades.unshift(nuevaUnidad); // Agregar al inicio de la lista
+      guardarDatos();
+
+      // Limpiar campos
+      document.getElementById('econ-input').value = '';
+      document.getElementById('placa-input').value = '';
+    }
+
+    function marcarSalida(id) {
+      if (confirm('¿Confirmar que la unidad tomó ruta / salió del patio?')) {
+        unidades = unidades.filter(u => u.id !== id);
+        guardarDatos();
+      }
+    }
+
+    function calcularHoras(fechaIngresoIso) {
+      const ingreso = new Date(fechaIngresoIso);
+      const ahora = new Date();
+      const diferenciaMs = ahora - ingreso;
+      const horas = (diferenciaMs / (1000 * 60 * 60)).toFixed(1);
+      return parseFloat(horas);
+    }
+
+    function renderizarListado() {
+      const contenedor = document.getElementById('contenedor-lista');
+      const filtro = document.getElementById('buscar').value.trim().toUpperCase();
+      contenedor.innerHTML = '';
+
+      // Filtrar por económico o placa
+      const unidadesFiltradas = unidades.filter(u => 
+        u.economico.includes(filtro) || u.placa.includes(filtro)
+      );
+
+      document.getElementById('total-unidades').textContent = `${unidades.length} en patio`;
+
+      if (unidadesFiltradas.length === 0) {
+        contenedor.innerHTML = '<p style="text-align:center; color: var(--text-secondary); margin-top: 20px;">No hay unidades registradas.</p>';
+        return;
+      }
+
+      unidadesFiltradas.forEach(u => {
+        const horas = calcularHoras(u.ingreso);
+        const esAlerta = horas >= 12; // Resalta en rojo si lleva 12 hrs o más sin tomar ruta
+
+        const tarjeta = document.createElement('div');
+        tarjeta.className = `unit-card ${esAlerta ? 'alerta' : ''}`;
+        
+        const fechaHoraFormateada = new Date(u.ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+
+        tarjeta.innerHTML = `
+          <div class="unit-info">
+            <h3>Eco: ${u.economico}</h3>
+            <p><strong>Placa:</strong> ${u.placa}</p>
+            <p><strong>Ingreso:</strong> ${fechaHoraFormateada}</p>
+          </div>
+          <div style="text-align: right;">
+            <div class="stay-time ${esAlerta ? 'alerta-texto' : ''}">${horas} hrs</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px;">en patio</div>
+            <div class="actions">
+              <button class="btn btn-danger btn-small" onclick="marcarSalida(${u.id})">Tomó Ruta</button>
+            </div>
+          </div>
+        `;
+        contenedor.appendChild(tarjeta);
+      });
+    }
+
+    // Cargar listado al abrir la app
+    renderizarListado();
+    
+    // Actualizar las horas de estancia automáticamente cada minuto
+    setInterval(renderizarListado, 60000);
+  </script>
+</body>
+</html>
