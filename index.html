@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Control de Patio - Remolques</title>
-  <!-- Soporte para guardar como PWA en pantalla de inicio de iOS -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Control Patio">
@@ -24,17 +23,30 @@
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: var(--bg-color); color: var(--text); margin: 0; padding: 16px; }
 
+    /* Pantalla de Bloqueo */
+    #lock-screen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--bg-color);
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      z-index: 9999; padding: 20px;
+    }
+    .lock-card { background: var(--card-bg); padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 320px; text-align: center; }
+    .lock-card h2 { margin-top: 0; margin-bottom: 16px; font-size: 1.2rem; }
+
+    /* Interfaz de la App */
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .header h1 { font-size: 1.4rem; margin: 0; }
     .badge-count { background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; }
 
     .card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px; }
-    
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; outline: none; }
     input:focus { border-color: var(--primary); }
 
     .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: 600; width: 100%; cursor: pointer; }
+    .btn-secondary { background: #5856d6; margin-top: 8px; }
     .btn-danger { background: var(--danger); }
     .btn:active { opacity: 0.8; }
 
@@ -43,43 +55,81 @@
 
     .unit-card { background: var(--card-bg); border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 6px solid var(--success); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
     .unit-card.alerta { border-left-color: var(--danger); }
-    
     .unit-info h3 { margin: 0 0 4px 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
     .unit-info p { margin: 2px 0; font-size: 0.85rem; color: var(--text-secondary); }
-    
     .stay-time { font-weight: bold; font-size: 1.1rem; color: var(--text); }
     .stay-time.alerta-texto { color: var(--danger); }
-
     .actions { display: flex; gap: 8px; }
     .btn-small { padding: 8px 12px; font-size: 0.85rem; width: auto; }
+    
+    #file-input { display: none; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h1>Control de Patio</h1>
-    <span class="badge-count" id="total-unidades">0 en patio</span>
-  </div>
-
-  <!-- Formulario de Entrada Rápida -->
-  <div class="card">
-    <div class="form-grid">
-      <input type="text" id="econ-input" placeholder="Económico (ej. 4502)" autocomplete="off">
-      <input type="text" id="placa-input" placeholder="Placa (opcional)" autocomplete="off">
+  <!-- Pantalla de Inicio de Sesión / Bloqueo -->
+  <div id="lock-screen">
+    <div class="lock-card">
+      <h2>🔒 Control de Acceso</h2>
+      <input type="password" id="pin-input" placeholder="Ingresa la contraseña" style="margin-bottom: 12px; text-align: center;">
+      <button class="btn" onclick="verificarPassword()">Ingresar</button>
     </div>
-    <button class="btn" onclick="registrarEntrada()">Ingresar a Patio</button>
   </div>
 
-  <!-- Buscador en tiempo real -->
-  <div class="search-box">
-    <input type="text" id="buscar" placeholder="🔍 Buscar por económico o placa..." oninput="renderizarListado()">
-  </div>
+  <!-- Contenido Principal de la Aplicación -->
+  <div id="app-content" class="hidden">
+    <div class="header">
+      <h1>Control de Patio</h1>
+      <div>
+        <span class="badge-count" id="total-unidades">0 en patio</span>
+        <button class="btn btn-small" onclick="bloquearApp()" style="background: #8e8e93; margin-left: 8px;">🔒</button>
+      </div>
+    </div>
 
-  <!-- Lista de Unidades Activas -->
-  <div id="contenedor-lista"></div>
+    <!-- Formulario de Entrada Rápida -->
+    <div class="card">
+      <div class="form-grid">
+        <input type="text" id="econ-input" placeholder="Económico (ej. 4502)" autocomplete="off">
+        <input type="text" id="placa-input" placeholder="Placa (opcional)" autocomplete="off">
+      </div>
+      <button class="btn" onclick="registrarEntrada()">Ingresar a Patio</button>
+      
+      <input type="file" id="file-input" accept=".csv" onchange="importarCSV(event)">
+      <button class="btn btn-secondary" onclick="document.getElementById('file-input').click()">📁 Cargar Base de Datos (CSV/Excel)</button>
+    </div>
+
+    <!-- Buscador en tiempo real -->
+    <div class="search-box">
+      <input type="text" id="buscar" placeholder="🔍 Buscar por económico o placa..." oninput="renderizarListado()">
+    </div>
+
+    <!-- Lista de Unidades Activas -->
+    <div id="contenedor-lista"></div>
+  </div>
 
   <script>
-    // Recuperar datos almacenados en el navegador del iPad o iniciar array vacío
+    // Configura tu contraseña aquí (por defecto es 1234)
+    const CLAVE_ACCESO = "1234";
+
+    function verificarPassword() {
+      const pinIngresado = document.getElementById('pin-input').value;
+      if (pinIngresado === CLAVE_ACCESO) {
+        document.getElementById('lock-screen').classList.add('hidden');
+        document.getElementById('app-content').classList.remove('hidden');
+        document.getElementById('pin-input').value = '';
+        renderizarListado();
+      } else {
+        alert('Contraseña incorrecta.');
+        document.getElementById('pin-input').value = '';
+      }
+    }
+
+    function bloquearApp() {
+      document.getElementById('lock-screen').classList.remove('hidden');
+      document.getElementById('app-content').classList.add('hidden');
+    }
+
     let unidades = JSON.parse(localStorage.getItem('patio_unidades')) || [];
 
     function guardarDatos() {
@@ -96,7 +146,6 @@
         return;
       }
 
-      // Verificar si ya existe en patio
       const existe = unidades.some(u => u.economico === econ);
       if (existe) {
         alert(`El económico ${econ} ya está registrado en patio.`);
@@ -110,12 +159,49 @@
         ingreso: new Date().toISOString()
       };
 
-      unidades.unshift(nuevaUnidad); // Agregar al inicio de la lista
+      unidades.unshift(nuevaUnidad);
       guardarDatos();
 
-      // Limpiar campos
       document.getElementById('econ-input').value = '';
       document.getElementById('placa-input').value = '';
+    }
+
+    function importarCSV(event) {
+      const archivo = event.target.files[0];
+      if (!archivo) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const contenido = e.target.result;
+        const lineas = contenido.split('\n');
+        let cargados = 0;
+
+        lineas.forEach((linea, index) => {
+          if (linea.trim() === '') return;
+          const columnas = linea.split(',');
+          
+          const econ = columnas[0] ? columnas[0].trim().toUpperCase() : '';
+          const placa = columnas[1] ? columnas[1].trim().toUpperCase() : 'S/P';
+
+          if (index === 0 && (econ.includes('ECONOMICO') || econ.includes('ECO'))) return;
+
+          if (econ && !unidades.some(u => u.economico === econ)) {
+            unidades.unshift({
+              id: Date.now() + index,
+              economico: econ,
+              placa: placa || 'S/P',
+              ingreso: new Date().toISOString()
+            });
+            cargados++;
+          }
+        });
+
+        guardarDatos();
+        alert(`Se cargaron ${cargados} unidades correctamente a la app.`);
+        event.target.value = '';
+      };
+
+      reader.readAsText(archivo);
     }
 
     function marcarSalida(id) {
@@ -138,7 +224,6 @@
       const filtro = document.getElementById('buscar').value.trim().toUpperCase();
       contenedor.innerHTML = '';
 
-      // Filtrar por económico o placa
       const unidadesFiltradas = unidades.filter(u => 
         u.economico.includes(filtro) || u.placa.includes(filtro)
       );
@@ -152,7 +237,7 @@
 
       unidadesFiltradas.forEach(u => {
         const horas = calcularHoras(u.ingreso);
-        const esAlerta = horas >= 12; // Resalta en rojo si lleva 12 hrs o más sin tomar ruta
+        const esAlerta = horas >= 12;
 
         const tarjeta = document.createElement('div');
         tarjeta.className = `unit-card ${esAlerta ? 'alerta' : ''}`;
@@ -177,10 +262,6 @@
       });
     }
 
-    // Cargar listado al abrir la app
-    renderizarListado();
-    
-    // Actualizar las horas de estancia automáticamente cada minuto
     setInterval(renderizarListado, 60000);
   </script>
 </body>
