@@ -4,83 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Control de Patio y Flota</title>
-  <style>
-    :root {
-      --bg: #1e1e24;
-      --card-bg: #2b2d42;
-      --accent: #ffb703;
-      --primary: #007aff;
-      --success: #2ec4b6;
-      --warning: #ff9f1c;
-      --danger: #e71d36;
-      --text: #f8f9fa;
-      --text-muted: #8d99ae;
-      --border: #3d405b;
-    }
-
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); margin: 0; padding: 12px; }
-
-    /* Navegación por pestañas */
-    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; background: #141419; padding: 6px; border-radius: 12px; }
-    .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-muted); font-weight: bold; font-size: 0.9rem; border-radius: 8px; cursor: pointer; }
-    .tab-btn.active { background: var(--primary); color: white; }
-
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    .card { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); }
-    h2 { font-size: 1.1rem; margin-top: 0; color: var(--accent); }
-
-    /* Buscador Ficha Técnica */
-    .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
-    input, select { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: #141419; color: var(--text); font-size: 0.95rem; width: 100%; }
-    
-    .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; font-size: 0.9rem; }
-    .data-item { background: #202231; padding: 8px 12px; border-radius: 6px; border-left: 3px solid var(--primary); }
-    .data-label { color: var(--text-muted); font-size: 0.75rem; display: block; }
-    .data-value { font-weight: bold; }
-
-    /* Tablas / Listas de Patio */
-    .unit-row { background: #202231; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--warning); }
-    .unit-row.facturado { border-left-color: var(--success); }
-    .unit-row.despachado { border-left-color: #8d99ae; opacity: 0.6; }
-
-    .btn { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-success { background: var(--success); color: #000; }
-    .btn-danger { background: var(--danger); }
-    .btn-warning { background: var(--warning); color: #000; }
-
-    .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
-    .badge-proceso { background: var(--warning); color: #000; }
-    .badge-facturado { background: var(--success); color: #000; }
-    
-    #file-input { display: none; }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Pestañas Superiores -->
-  <div class="nav-tabs">
+  <!-- Pestañas Principales -->
+  <nav class="nav-tabs">
     <button class="tab-btn active" onclick="verTab('tab-buscador')">🔍 Buscador Master</button>
     <button class="tab-btn" onclick="verTab('tab-formado')">🚛 En Formado / Carga</button>
     <button class="tab-btn" onclick="verTab('tab-patio')">📍 Patio & Estatus</button>
-  </div>
+  </nav>
 
-  <!-- TAB 1: BUSCADOR DE DATOS POOL (ESTILO EXCEL) -->
-  <div id="tab-buscador" class="tab-content active">
+  <!-- TAB 1: BUSCADOR MASTER POOL -->
+  <section id="tab-buscador" class="tab-content active">
     <div class="card">
-      <h2>Buscador de Datos de Remolque</h2>
-      <div class="search-row">
-        <input type="text" id="input-busqueda" placeholder="Ingrese Económico o Placa..." onkeyup="buscarRemolqueMaster()">
+      <h2>Buscador Ficha Técnica (Master Pool)</h2>
+      <input type="text" id="input-busqueda" placeholder="Ingrese Económico o Placa..." onkeyup="buscarRemolqueMaster()">
+      <div style="margin-top: 10px;">
+        <input type="file" id="file-input" accept=".csv" onchange="importarMasterCSV(event)">
+        <button class="btn btn-warning" onclick="document.getElementById('file-input').click()">📁 Cargar Master Pool (CSV/Excel)</button>
       </div>
-      
-      <input type="file" id="file-input" accept=".csv" onchange="importarMasterCSV(event)">
-      <button class="btn btn-warning" style="width:100%" onclick="document.getElementById('file-input').click()">📁 Cargar Master Pool (CSV/Excel)</button>
     </div>
 
-    <div class="card" id="resultado-master" style="display:none;">
-      <h2 id="master-titulo">Ficha Técnica</h2>
+    <div class="card hidden" id="resultado-master">
+      <h2>Ficha Técnica del Remolque</h2>
       <div class="data-grid">
         <div class="data-item"><span class="data-label">Placa</span><span class="data-value" id="m-placa">-</span></div>
         <div class="data-item"><span class="data-label">Económico</span><span class="data-value" id="m-eco">-</span></div>
@@ -91,207 +38,40 @@
         <div class="data-item"><span class="data-label">Arrendador</span><span class="data-value" id="m-arrendador">-</span></div>
         <div class="data-item"><span class="data-label">Categoría</span><span class="data-value" id="m-categoria">-</span></div>
       </div>
-      <div style="margin-top: 12px; display: flex; gap: 8px;">
+      <div class="actions-row">
         <button class="btn btn-warning" onclick="enviarAFormado()">Mover a "En Carga"</button>
-        <button class="btn" onclick="enviarAPatioDirecto()">Ingresar a Patio</button>
+        <button class="btn btn-primary" onclick="enviarAPatioDirecto()">Ingresar a Patio</button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- TAB 2: REMOLQUES EN FORMADO / PROCESO DE CARGA -->
-  <div id="tab-formado" class="tab-content">
+  <!-- TAB 2: EN FORMADO / CARGA -->
+  <section id="tab-formado" class="tab-content">
     <div class="card">
-      <h2>Ingreso Manual a Proceso de Carga</h2>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+      <h2>Ingreso a Proceso de Carga</h2>
+      <div class="form-grid">
         <input type="text" id="f-eco" placeholder="Económico">
         <input type="text" id="f-placa" placeholder="Placa">
       </div>
-      <label style="font-size:0.8rem; color:var(--text-muted)">Fecha y Hora de Inicio de Carga:</label>
-      <input type="datetime-local" id="f-inicio" style="margin-bottom: 8px;">
-      <button class="btn btn-warning" style="width: 100%;" onclick="registrarProcesoCarga()">Iniciar Proceso de Carga</button>
+      <label class="input-label">Fecha y Hora de Inicio de Carga:</label>
+      <input type="datetime-local" id="f-inicio">
+      <button class="btn btn-warning full-width" onclick="registrarProcesoCarga()">Iniciar Proceso de Carga</button>
     </div>
 
     <div class="card">
       <h2>Unidades Actualmente en Carga</h2>
       <div id="lista-formado"></div>
     </div>
-  </div>
+  </section>
 
-  <!-- TAB 3: CONTROL DE PATIO Y ESTATUS -->
-  <div id="tab-patio" class="tab-content">
+  <!-- TAB 3: PATIO & ESTATUS -->
+  <section id="tab-patio" class="tab-content">
     <div class="card">
       <h2>Unidades en Patio CEDIS</h2>
       <div id="lista-patio"></div>
     </div>
-  </div>
+  </section>
 
-  <script>
-    // Bases de Datos Locales
-    let masterPool = JSON.parse(localStorage.getItem('master_pool')) || [];
-    let unidadesPatio = JSON.parse(localStorage.getItem('unidades_patio')) || [];
-    let remolqueSeleccionado = null;
-
-    function verTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      event.target.classList.add('active');
-      renderizarListas();
-    }
-
-    // Cargar Base Master de Excel
-    function importarMasterCSV(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const lines = evt.target.result.split('\n');
-        masterPool = [];
-        lines.forEach((line, index) => {
-          if (index === 0 || !line.trim()) return;
-          const col = line.split(',');
-          masterPool.push({
-            placa: col[0] ? col[0].trim() : '-',
-            economico: col[1] ? col[1].trim() : '-',
-            tipo: col[2] ? col[2].trim() : '-',
-            puerta: col[3] ? col[3].trim() : '-',
-            categoria: col[4] ? col[4].trim() : '-',
-            capacidad: col[5] ? col[5].trim() : '-',
-            serie: col[6] ? col[6].trim() : '-',
-            cedis: col[8] ? col[8].trim() : '-',
-            arrendador: col[9] ? col[9].trim() : '-'
-          });
-        });
-        localStorage.setItem('master_pool', JSON.stringify(masterPool));
-        alert(`Master Pool cargado con ${masterPool.length} registros.`);
-      };
-      reader.readAsText(file);
-    }
-
-    // Buscador Ficha Técnica
-    function buscarRemolqueMaster() {
-      const query = document.getElementById('input-busqueda').value.trim().toUpperCase();
-      if (!query) { document.getElementById('resultado-master').style.display = 'none'; return; }
-
-      const res = masterPool.find(m => m.economico.toUpperCase() === query || m.placa.toUpperCase() === query);
-      if (res) {
-        remolqueSeleccionado = res;
-        document.getElementById('m-placa').textContent = res.placa;
-        document.getElementById('m-eco').textContent = res.economico;
-        document.getElementById('m-capacidad').textContent = res.capacidad;
-        document.getElementById('m-cedis').textContent = res.cedis;
-        document.getElementById('m-puerta').textContent = res.puerta;
-        document.getElementById('m-serie').textContent = res.serie;
-        document.getElementById('m-arrendador').textContent = res.arrendador;
-        document.getElementById('m-categoria').textContent = res.categoria;
-        document.getElementById('resultado-master').style.display = 'block';
-      } else {
-        document.getElementById('resultado-master').style.display = 'none';
-      }
-    }
-
-    function registrarProcesoCarga() {
-      const eco = document.getElementById('f-eco').value.trim();
-      const placa = document.getElementById('f-placa').value.trim();
-      const horaInput = document.getElementById('f-inicio').value;
-
-      if (!eco) { alert('Ingrese al menos el económico.'); return; }
-
-      const ingresoFecha = horaInput ? new Date(horaInput).toISOString() : new Date().toISOString();
-
-      unidadesPatio.unshift({
-        id: Date.now(),
-        economico: eco,
-        placa: placa || 'S/P',
-        estatus: 'Proceso de Carga',
-        inicioCarga: ingresoFecha,
-        fechaFacturado: null
-      });
-
-      guardar();
-      document.getElementById('f-eco').value = '';
-      document.getElementById('f-placa').value = '';
-      alert('Unidad puesta en Proceso de Carga');
-    }
-
-    function enviarAFormado() {
-      if (!remolqueSeleccionado) return;
-      document.getElementById('f-eco').value = remolqueSeleccionado.economico;
-      document.getElementById('f-placa').value = remolqueSeleccionado.placa;
-      verTab('tab-formado');
-    }
-
-    function cambiarEstatus(id, nuevoEstatus) {
-      const u = unidadesPatio.find(item => item.id === id);
-      if (u) {
-        u.estatus = nuevoEstatus;
-        if (nuevoEstatus === 'Facturado') {
-          u.fechaFacturado = new Date().toISOString();
-        }
-        guardar();
-      }
-    }
-
-    function calcularHoras(isoFecha) {
-      if (!isoFecha) return '0.0';
-      const diff = new Date() - new Date(isoFecha);
-      return (diff / (1000 * 60 * 60)).toFixed(1);
-    }
-
-    function guardar() {
-      localStorage.setItem('unidades_patio', JSON.stringify(unidadesPatio));
-      renderizarListas();
-    }
-
-    function renderizarListas() {
-      const contFormado = document.getElementById('lista-formado');
-      const contPatio = document.getElementById('lista-patio');
-      contFormado.innerHTML = '';
-      contPatio.innerHTML = '';
-
-      unidadesPatio.forEach(u => {
-        const hrsCarga = calcularHoras(u.inicioCarga);
-        const hrsFacturado = u.fechaFacturado ? calcularHoras(u.fechaFacturado) : '-';
-
-        // Renderizar en Formado / Carga
-        if (u.estatus === 'Proceso de Carga') {
-          const div = document.createElement('div');
-          div.className = 'unit-row';
-          div.innerHTML = `
-            <div>
-              <strong>Eco: ${u.economico}</strong> | Placa: ${u.placa}<br>
-              <span class="badge badge-proceso">Proceso de Carga</span>
-              <small style="color:var(--text-muted)">Inicio: ${new Date(u.inicioCarga).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
-            </div>
-            <div style="text-align:right">
-              <span style="font-size:1.1rem; font-weight:bold">${hrsCarga} hrs</span><br>
-              <button class="btn btn-success" onclick="cambiarEstatus(${u.id}, 'Facturado')">Marcar Facturado</button>
-            </div>
-          `;
-          contFormado.appendChild(div);
-        }
-
-        // Renderizar en Patio General
-        if (u.estatus !== 'Despachada') {
-          const divP = document.createElement('div');
-          divP.className = `unit-row ${u.estatus.toLowerCase()}`;
-          divP.innerHTML = `
-            <div>
-              <strong>Eco: ${u.economico}</strong> | Placa: ${u.placa}<br>
-              <span class="badge badge-${u.estatus.toLowerCase()}">${u.estatus}</span>
-            </div>
-            <div style="text-align:right">
-              <small>Estadía Carga: <b>${hrsCarga} hrs</b></small><br>
-              ${u.estatus === 'Facturado' ? `<small>Estadía Facturado: <b style="color:var(--success)">${hrsFacturado} hrs</b></small><br>` : ''}
-              <button class="btn btn-danger" onclick="cambiarEstatus(${u.id}, 'Despachada')" style="margin-top:4px">Despachar</button>
-            </div>
-          `;
-          contPatio.appendChild(divP);
-        }
-      });
-    }
-
-    renderizarListas();
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
